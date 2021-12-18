@@ -2,22 +2,22 @@
 public class Table {
 	private Kind kind;
 	private int number;
-	private KeyWords type;
+	private String type;
 
-	public Table(Kind kind, KeyWords type) {
+	public Table(Kind kind, String type) {
 		this.kind = kind;
 		this.type = type;
 	}
 
-	public Table(Kind kind, int count, KeyWords Type) {
+	public Table(Kind kind, int count, String Type) {
 
 	}
 
-	public KeyWords getType() {
+	public String getType() {
 		return type;
 	}
 
-	public void setType(KeyWords type) {
+	public void setType(String type) {
 		this.type = type;
 	}
 

@@ -1,3 +1,3 @@
 	public  enum Kind {
-		STATIC, FIELD, VAR, ARG
+		STATIC, FIELD, VAR, ARG, NONE
 	}
