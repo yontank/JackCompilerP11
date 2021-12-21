@@ -15,7 +15,7 @@ import org.apache.commons.lang3.StringUtils;
  * so they become something else entirely.
  */
 
-// 6.12.21 everything works good FOR NOW, make a method that gets all the files jack files if File is directory and lets have a beer or something
+// 6.12.21 everything works good FOR NOW, make a method that gets all the files jack files if File is directory
 public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException {
@@ -50,7 +50,7 @@ run();
 		engine.compileClass();
 		engine.closeWriter();
 		long end = System.nanoTime();
-		System.out.println("FINSHED IN:  " + (end - start) + " SECONDS ");
+		System.out.println("FINSHED IN:  " + (end - start)  + " NANO SECONDS ");
 	}
 
 	public static boolean isSymbol(char c) {

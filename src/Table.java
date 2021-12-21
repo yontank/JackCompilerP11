@@ -9,8 +9,9 @@ public class Table {
 		this.type = type;
 	}
 
-	public Table(Kind kind, int count, String Type) {
-
+	public Table(Kind kind, int count, String type) {
+		this(kind, type);
+		number = count;
 	}
 
 	public String getType() {
