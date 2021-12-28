@@ -3,15 +3,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.logging.XMLFormatter;
 
 public class CompilationEngine {
 	private PrintWriter writer;
 	private JackTockenizer tokens;
+	private SymbolTable symbolTable;
+	private String className;
 
 	public CompilationEngine(File file, JackTockenizer tockenizer) {
 		this.tokens = tockenizer;
 		tockenizer.advance();
+		symbolTable = new SymbolTable();
 		try {
 			writer = new PrintWriter(new BufferedWriter(new FileWriter(file)));
 		} catch (IOException e) {
@@ -30,7 +32,7 @@ public class CompilationEngine {
 
 		isIdentifier(true);
 		writeXMLType(tokenType(), tokens.identifier());
-
+		className = tokens.token();
 		tokens.advance();
 
 		isSymbol("{", true);
@@ -52,11 +54,18 @@ public class CompilationEngine {
 
 	public void compileSubroutineDec() {
 		writeOpener("subroutineDec");
+		symbolTable.startSubroutine();
 
 		eat("constructor|method|function");
-		writeXMLOutput();
+		boolean isMethod = tokens.token().equals("method");
 
-		tokens.advance();
+		if (isMethod) {
+			symbolTable.define("this", className, Kind.ARG);
+			writer.println(symbolTableXML("this"));
+
+		}
+
+		writeAndAdvance();
 
 		if (eatNoError("void") || isType())
 			writeXMLOutput();
@@ -71,26 +80,7 @@ public class CompilationEngine {
 		isSymbol("(", true);
 		writeXMLOutput();
 
-		writeOpener("parameterList");
-
-		tokens.advance();
-
-		while (!tokens.token().equals(")")) {
-			isType();
-			writeXMLOutput();
-			tokens.advance();
-
-			isIdentifier(true);
-			writeXMLOutput();
-			tokens.advance();
-
-			if (eatNoError(",")) {
-				writeXMLOutput();
-				tokens.advance();
-			}
-
-		}
-		writeCloser("parameterList");
+		compileParamList();
 
 		isSymbol(")", true);
 		writeXMLOutput();
@@ -101,12 +91,48 @@ public class CompilationEngine {
 		writeCloser("subroutineDec");
 	}
 
+	private void compileParamList() {
+		writeOpener("parameterList");
+
+		tokens.advance();
+
+		while (!tokens.token().equals(")")) {
+			isType();
+			String type = tokens.token();
+
+			tokens.advance();
+			isIdentifier(true);
+
+			String name = tokens.token();
+
+			tokens.advance();
+			symbolTable.define(name, type, Kind.ARG);
+			writer.println(symbolTableXML(Kind.ARG, name, type, symbolTable.indexOf(name)));
+			if (eatNoError(",")) {
+				writeXMLOutput();
+				tokens.advance();
+			}
+
+		}
+		writeCloser("parameterList");
+	}
+
 	private void compileSubroutineBody() {
 		writeOpener("subroutineBody");
 		isSymbol("{", true);
 		writeXMLOutput();
 		tokens.advance();
 		// add statements
+		checkVarOrStatement();
+		isSymbol("}", true);
+		writeXMLOutput();
+		writeCloser("subroutineBody");
+
+		tokens.advance();
+
+	}
+
+	private void checkVarOrStatement() {
 		while (eatNoError("var") || isStatement()) {
 			if (eatNoError("}"))
 				break;
@@ -117,12 +143,6 @@ public class CompilationEngine {
 			if (isStatement())
 				statements(true);
 		}
-		isSymbol("}", true);
-		writeXMLOutput();
-		writeCloser("subroutineBody");
-
-		tokens.advance();
-
 	}
 
 	@SuppressWarnings("incomplete-switch")
@@ -204,12 +224,14 @@ public class CompilationEngine {
 
 		isSymbol("{", true);
 		writeAndAdvance();
+		symbolTable.createScope();
 
-		statements(true);
+		checkVarOrStatement();
 
 		isSymbol("}", true);
 		writeAndAdvance();
-
+		symbolTable.removeScope();
+		writeCloser("whileStatement");
 	}
 
 	private void compileIf() {
@@ -226,11 +248,13 @@ public class CompilationEngine {
 		writeAndAdvance();
 
 		isSymbol("{", true);
+		symbolTable.createScope();
 		writeAndAdvance();
 
-		statements(true);
+		checkVarOrStatement();
 
 		isSymbol("}", true);
+		symbolTable.removeScope();
 		writeAndAdvance();
 
 		if (eatNoError("else")) {
@@ -238,12 +262,15 @@ public class CompilationEngine {
 			writeAndAdvance();
 
 			isSymbol("{", true);
+			symbolTable.createScope();
 			writeAndAdvance();
 
-			statements(true);
+			checkVarOrStatement();
 
 			isSymbol("}", true);
 			writeAndAdvance();
+			symbolTable.removeScope();
+
 			writeCloser("elseStatement");
 		}
 		writeCloser("ifStatement");
@@ -259,7 +286,9 @@ public class CompilationEngine {
 		tokens.advance();
 
 		isIdentifier(true);
-		writeXMLOutput();
+		if (!symbolTable.containsVariable(tokens.token()))
+			throw new IllegalStateException("NO VARIABLE FOUND NAMED " + tokens.token() + " WITHIN SCOPE");
+		writer.println(symbolTableXML(tokens.token()));
 		tokens.advance();
 
 		if (isSymbol("[", false)) {
@@ -287,12 +316,14 @@ public class CompilationEngine {
 		tokens.advance();
 
 		isType();
-		writeXMLOutput();
+		String type = tokens.token();
 		tokens.advance();
 
 		isIdentifier(true);
-		writeXMLOutput();
+		String name = tokens.token();
 		tokens.advance();
+		symbolTable.define(name, type, Kind.VAR);
+		writer.println(symbolTableXML(Kind.VAR, name, type, symbolTable.indexOf(name)));
 
 		while (!tokens.token().equals(";")) {
 			isSymbol(",", true);
@@ -300,7 +331,9 @@ public class CompilationEngine {
 			tokens.advance();
 
 			isIdentifier(true);
-			writeXMLOutput();
+			name = tokens.token();
+			symbolTable.define(name, type, Kind.VAR);
+			writer.println(symbolTableXML(Kind.VAR, name, type, symbolTable.indexOf(name)));
 			tokens.advance();
 
 		}
@@ -317,27 +350,33 @@ public class CompilationEngine {
 	public void compileVarDec() {
 		writeOpener("classVarDec");
 		eat("static|field", TokenType.KEYWORD);
-		writeXMLType(tokenType(), tokens.token());
+		Kind kind = checkKind();
 
 		tokens.advance();
 		isType();
-		writeXMLType(tokenType(), tokens.token());
+		String type = tokens.token();
 
 		tokens.advance();
 		isIdentifier(true);
-		writeXMLType(tokenType(), tokens.token());
+		String name = tokens.token();
+
+		symbolTable.define(name, type, kind);
+		int location = symbolTable.indexOf(name);
+		writer.println(symbolTableXML(kind, name, type, location));
 
 		tokens.advance();
 
 		while (!tokens.token().equals(";")) {
-			isSymbol(true);
+			// TODO changed here, check if it broke
+			isSymbol(",", true);
 			writeXMLType(tokenType(), tokens.token());
 
 			tokens.advance();
 
 			isIdentifier(true);
-			writeXMLType(tokenType(), tokens.token());
-
+			name = tokens.token();
+			symbolTable.define(name, type, kind);
+			writer.println(symbolTableXML(kind, name, type, symbolTable.indexOf(name)));
 			tokens.advance();
 
 		}
@@ -391,7 +430,8 @@ public class CompilationEngine {
 		}
 
 		else if (isIdentifier(false)) {
-			writeAndAdvance();
+			writer.println(symbolTableXML(tokens.token()));
+			tokens.advance();
 
 			if (isSymbol("[", false)) {
 				writeAndAdvance();
@@ -422,7 +462,14 @@ public class CompilationEngine {
 		writeOpener("subroutineCall");
 
 		if (isIdentifier(false))
-			writeAndAdvance();
+			if (symbolTable.valueExists(tokens.token())) {
+				writer.println(symbolTableXML(tokens.token()));
+				tokens.advance();
+			} else {
+				writeAndAdvance();
+				System.out.println("WARNING:: NAME CALLED " + tokens.token()
+						+ " WASNT FOUND IN VARIABLE SCOPE, COMPILER GOING TO GUESS ITS A STATIC CLASS.");
+			}
 
 		if (isSymbol("(", false)) {
 			writeAndAdvance();
@@ -600,4 +647,24 @@ public class CompilationEngine {
 		return tokens.token().equals("-") || tokens.token().equals("~");
 	}
 
+	private String symbolTableXML(Kind kind, String name, String type, int location) {
+		return "<" + type + "_" + kind.toString().toLowerCase() + "_" + location + "> " + name + "</" + type + "_"
+				+ kind.toString().toLowerCase() + "_" + location + ">";
+	}
+
+	private String symbolTableXML(String name) {
+
+		Table table = symbolTable.getTable(name);
+		if (table != null)
+			return symbolTableXML(table.getKind(), name, table.getType(), table.getNumber());
+		else
+			return "<" +
+
+					tokenType().toLowerCase() + "> " + name + " </" + tokenType().toLowerCase() + ">";
+
+	}
+
+	private Kind checkKind() {
+		return Kind.valueOf(tokens.token().toUpperCase());
+	}
 }

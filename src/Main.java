@@ -16,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
  */
 
 // 6.12.21 everything works good FOR NOW, make a method that gets all the files jack files if File is directory
+//TODO 12.27.21 build scoping for if, elif, while. 
 public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException {
@@ -43,7 +44,7 @@ run();
 	public static void run() {
 		long start = System.nanoTime();
 		System.out.println("STARTING");
-		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\11\\Seven\\Main.jack";
+		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\10\\ArrayTest\\Main.jack";
 		JackTockenizer tockenizer = new JackTockenizer(new File(filePath));
 		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\XML.jack"), tockenizer);
 

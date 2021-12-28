@@ -3,10 +3,19 @@ public class Table {
 	private Kind kind;
 	private int number;
 	private String type;
+	private String name;
 
 	public Table(Kind kind, String type) {
 		this.kind = kind;
 		this.type = type;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getname() {
+		return name;
 	}
 
 	public Table(Kind kind, int count, String type) {
@@ -36,5 +45,9 @@ public class Table {
 
 	public void setKind(Kind kind) {
 		this.kind = kind;
+	}
+
+	public String toString() {
+		return type + "_" + kind.toString().toLowerCase() + "_" + number;
 	}
 }
