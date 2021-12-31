@@ -1,42 +1,40 @@
-import java.io.BufferedWriter;
+package Program;
+
+import static Program.CompilationToWriterUtils.opToCommand;
+import static Program.CompilationToWriterUtils.swapToSegment;
+import static Program.CompilationToWriterUtils.swaptoSegment;
+
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 
 public class CompilationEngine {
-	private PrintWriter writer;
+	private VMWriter writer;
 	private JackTockenizer tokens;
 	private SymbolTable symbolTable;
 	private String className;
+	private boolean isUnaryOp;
 
 	public CompilationEngine(File file, JackTockenizer tockenizer) {
 		this.tokens = tockenizer;
+
 		tockenizer.advance();
 		symbolTable = new SymbolTable();
-		try {
-			writer = new PrintWriter(new BufferedWriter(new FileWriter(file)));
-		} catch (IOException e) {
 
-			e.printStackTrace();
-			writer.close();
-		}
+		writer = new VMWriter(file);
+
 	}
 
 	public void compileClass() {
-		writeOpener("class");
+
 		eat(KeyWords.CLASS);
-		writeXMLType(tokenType(), tokens.token());
 
 		tokens.advance();
 
 		isIdentifier(true);
-		writeXMLType(tokenType(), tokens.identifier());
+
 		className = tokens.token();
 		tokens.advance();
 
 		isSymbol("{", true);
-		writeXMLType(tokenType(), tokens.symbol());
 
 		tokens.advance();
 
@@ -48,12 +46,11 @@ public class CompilationEngine {
 
 		}
 		isSymbol("}", true);
-		writeXMLType(tokenType(), tokens.symbol());
-		writeCloser("class");
+
 	}
 
 	public void compileSubroutineDec() {
-		writeOpener("subroutineDec");
+
 		symbolTable.startSubroutine();
 
 		eat("constructor|method|function");
@@ -61,38 +58,32 @@ public class CompilationEngine {
 
 		if (isMethod) {
 			symbolTable.define("this", className, Kind.ARG);
-			writer.println(symbolTableXML("this"));
 
 		}
 
-		writeAndAdvance();
+		advance();
 
 		if (eatNoError("void") || isType())
-			writeXMLOutput();
 
-		tokens.advance();
+			tokens.advance();
 
 		isIdentifier(true);
-		writeXMLOutput();
 
 		tokens.advance();
 
 		isSymbol("(", true);
-		writeXMLOutput();
 
 		compileParamList();
 
 		isSymbol(")", true);
-		writeXMLOutput();
+
 		tokens.advance();
 
 		compileSubroutineBody();
 
-		writeCloser("subroutineDec");
 	}
 
 	private void compileParamList() {
-		writeOpener("parameterList");
 
 		tokens.advance();
 
@@ -107,26 +98,23 @@ public class CompilationEngine {
 
 			tokens.advance();
 			symbolTable.define(name, type, Kind.ARG);
-			writer.println(symbolTableXML(Kind.ARG, name, type, symbolTable.indexOf(name)));
+
 			if (eatNoError(",")) {
-				writeXMLOutput();
+
 				tokens.advance();
 			}
 
 		}
-		writeCloser("parameterList");
 	}
 
 	private void compileSubroutineBody() {
-		writeOpener("subroutineBody");
+
 		isSymbol("{", true);
-		writeXMLOutput();
+
 		tokens.advance();
 		// add statements
 		checkVarOrStatement();
 		isSymbol("}", true);
-		writeXMLOutput();
-		writeCloser("subroutineBody");
 
 		tokens.advance();
 
@@ -141,20 +129,14 @@ public class CompilationEngine {
 				varDec();
 
 			if (isStatement())
-				statements(true);
+				statements();
 		}
 	}
 
 	@SuppressWarnings("incomplete-switch")
-	private void statements(boolean firstCall) {
-		if (firstCall)
-			writeOpener("statements");
-
-		if (isSymbol("}", false)) {
-			writeCloser("statements");
+	private void statements() {
+		if (isSymbol("}", false))
 			return;
-
-		}
 
 		switch (tokens.keywords()) {
 		case LET:
@@ -176,143 +158,135 @@ public class CompilationEngine {
 		}
 
 		if (isStatement())
-			statements(false);
-
-		if (firstCall)
-			writeCloser("statements");
+			statements();
 
 	}
 
 	private void compileReturn() {
-		writeOpener("returnStatement");
+
 		isKeyWord(KeyWords.RETURN);
-		writeAndAdvance();
+		advance();
 
 		if (!isSymbol(";", false))
 			compileExpression();
 
 		isSymbol(";", true);
-		writeAndAdvance();
-		writeCloser("returnStatement");
+		advance();
+
 	}
 
 	private void compileDo() {
-		writeOpener("doStatement");
-		isKeyWord(KeyWords.DO);
-		writeAndAdvance();
 
-		compileSubourtineCall();
+		isKeyWord(KeyWords.DO);
+		advance();
+
+		compileSubourtineCall(tokens.token());
 
 		isSymbol(";", true);
-		writeAndAdvance();
-		writeCloser("doStatement");
+		advance();
+
 	}
 
 	private void compileWhile() {
-		writeOpener("whileStatement");
 
 		isKeyWord(KeyWords.WHILE);
-		writeAndAdvance();
+		advance();
 
 		isSymbol("(", true);
-		writeAndAdvance();
+		advance();
 
 		compileExpression();
 
 		isSymbol(")", true);
-		writeAndAdvance();
+		advance();
 
 		isSymbol("{", true);
-		writeAndAdvance();
+		advance();
 		symbolTable.createScope();
 
 		checkVarOrStatement();
 
 		isSymbol("}", true);
-		writeAndAdvance();
+		advance();
 		symbolTable.removeScope();
-		writeCloser("whileStatement");
+
 	}
 
 	private void compileIf() {
-		writeOpener("ifStatement");
+
 		isKeyWord(KeyWords.IF);
-		writeAndAdvance();
+		advance();
 
 		isSymbol("(", true);
-		writeAndAdvance();
+		advance();
 
 		compileExpression();
 
 		isSymbol(")", true);
-		writeAndAdvance();
+		advance();
 
 		isSymbol("{", true);
 		symbolTable.createScope();
-		writeAndAdvance();
+		advance();
 
 		checkVarOrStatement();
 
 		isSymbol("}", true);
 		symbolTable.removeScope();
-		writeAndAdvance();
+		advance();
 
 		if (eatNoError("else")) {
-			writeOpener("elseStatement");
-			writeAndAdvance();
+
+			advance();
 
 			isSymbol("{", true);
 			symbolTable.createScope();
-			writeAndAdvance();
+			advance();
 
 			checkVarOrStatement();
 
 			isSymbol("}", true);
-			writeAndAdvance();
+			advance();
 			symbolTable.removeScope();
 
-			writeCloser("elseStatement");
 		}
-		writeCloser("ifStatement");
 
 	}
 
 	private void compileLet() {
-		writeOpener("letStatement");
-		writer.println("\n");
+
 		eat("let");
-		writeXMLOutput();
 
 		tokens.advance();
 
 		isIdentifier(true);
 		if (!symbolTable.containsVariable(tokens.token()))
 			throw new IllegalStateException("NO VARIABLE FOUND NAMED " + tokens.token() + " WITHIN SCOPE");
-		writer.println(symbolTableXML(tokens.token()));
+		String popVariable = tokens.token();
 		tokens.advance();
 
 		if (isSymbol("[", false)) {
-			writeAndAdvance();
+			advance();
 			compileExpression();
 			isSymbol("]", true);
-			writeAndAdvance();
+			advance();
 		}
 		isSymbol("=", true);
-		writeAndAdvance();
+		advance();
 
 		compileExpression();
 
 		isSymbol(";", true);
-		writeAndAdvance();
+		writer.writePop(swapToSegment(symbolTable.getTable(popVariable)),
+				symbolTable.getTable(popVariable).getNumber());
+		advance();
 
-		writeCloser("letStatement");
-		writer.println("\n");
 	}
 
 	private void varDec() {
-		writeOpener("varDec");
+
 		eat("var");
-		writeXMLOutput();
+
 		tokens.advance();
 
 		isType();
@@ -323,24 +297,22 @@ public class CompilationEngine {
 		String name = tokens.token();
 		tokens.advance();
 		symbolTable.define(name, type, Kind.VAR);
-		writer.println(symbolTableXML(Kind.VAR, name, type, symbolTable.indexOf(name)));
 
 		while (!tokens.token().equals(";")) {
 			isSymbol(",", true);
-			writeXMLOutput();
+
 			tokens.advance();
 
 			isIdentifier(true);
 			name = tokens.token();
 			symbolTable.define(name, type, Kind.VAR);
-			writer.println(symbolTableXML(Kind.VAR, name, type, symbolTable.indexOf(name)));
+
 			tokens.advance();
 
 		}
 		isSymbol(";", true);
-		writeXMLOutput();
+
 		tokens.advance();
-		writeCloser("varDec");
 	}
 
 	private boolean isStatement() {
@@ -348,7 +320,7 @@ public class CompilationEngine {
 	}
 
 	public void compileVarDec() {
-		writeOpener("classVarDec");
+
 		eat("static|field", TokenType.KEYWORD);
 		Kind kind = checkKind();
 
@@ -361,29 +333,24 @@ public class CompilationEngine {
 		String name = tokens.token();
 
 		symbolTable.define(name, type, kind);
-		int location = symbolTable.indexOf(name);
-		writer.println(symbolTableXML(kind, name, type, location));
 
 		tokens.advance();
 
 		while (!tokens.token().equals(";")) {
-			// TODO changed here, check if it broke
+
 			isSymbol(",", true);
-			writeXMLType(tokenType(), tokens.token());
 
 			tokens.advance();
 
 			isIdentifier(true);
 			name = tokens.token();
 			symbolTable.define(name, type, kind);
-			writer.println(symbolTableXML(kind, name, type, symbolTable.indexOf(name)));
+
 			tokens.advance();
 
 		}
 
 		isSymbol(";", true);
-		writeXMLType(tokenType(), tokens.token());
-		writeCloser("classVarDec");
 
 		tokens.advance();
 
@@ -393,7 +360,7 @@ public class CompilationEngine {
 	}
 
 	private boolean isExpression() {
-		// TODO fix String.
+
 		boolean isIntegerConstant = tokens.tokenType().equals(TokenType.INT_CONST);
 		boolean isStringConstant = tokens.tokenType().equals(TokenType.STRING_CONST) || tokens.isString();
 		boolean isKeyWord = isKeyWordConstant();
@@ -404,127 +371,143 @@ public class CompilationEngine {
 
 	private void compileTerm() {
 
-		writeOpener("term");
 		boolean isIntegerConstant = tokens.tokenType().equals(TokenType.INT_CONST);
 		boolean isStringConstant = tokens.tokenType().equals(TokenType.STRING_CONST) || tokens.isString();
 		boolean isKeyWord = isKeyWordConstant();
 
-		if (isStringConstant) {
-			if (isSymbol("\"", true))
-				writeAndAdvance();
-
-			writeXMLOutput(tokens.stringVal(), TokenType.STRING_CONST);
-
-			isSymbol("\"", true);
-			writeAndAdvance();
-
+		if (isIntegerConstant) {
+			writer.writePush(Segment.CONST, tokens.intVal());
+			advance();
 		}
 
-		else if (isIntegerConstant || isKeyWord)
-			writeAndAdvance();
-
-		else if (isUnaryOp()) {
-			writeAndAdvance();
-			compileTerm();
-
+		else if (isKeyWord) { // TODO add other keywords
+			if (tokens.token().matches("true|false"))
+				writer.writeBoolean(tokens.token());
+			advance();
 		}
 
 		else if (isIdentifier(false)) {
-			writer.println(symbolTableXML(tokens.token()));
+			if (symbolTable.valueExists(tokens.token()))
+				writer.writePush(swaptoSegment(symbolTable.getTable(tokens.token()).getKind()),
+						symbolTable.getTable(tokens.token()).getNumber());
+			String calleeName = tokens.token();
+
 			tokens.advance();
 
 			if (isSymbol("[", false)) {
-				writeAndAdvance();
+				advance();
 				compileExpression();
 
 				isSymbol("]", true);
-				writeAndAdvance();
+				advance();
 
 			}
 
 			else if (isSymbol("(", false) || isSymbol(".", false))
-				compileSubourtineCall();
+				compileSubourtineCall(calleeName);
+
+		}
+
+		else if (isStringConstant) {
+			if (isSymbol("\"", true))
+				advance();
+			tokens.stringVal();
+			isSymbol("\"", true);
+			advance();
 
 		}
 
 		else if (isSymbol("(", false)) {
-			writeAndAdvance();
+			advance();
 			compileExpression();
 			isSymbol(")", true);
-			writeAndAdvance();
+			advance();
+
+		} else if (isUnaryOp()) {
+			String op = tokens.token();
+			advance();
+			isUnaryOp = false;
+			compileTerm();
+
+			writer.writeArithmetic(opToCommand(op, true));
 
 		}
 
-		writeCloser("term");
 	}
 
-	private void compileSubourtineCall() {
-		writeOpener("subroutineCall");
-
+	private void compileSubourtineCall(String calleeName) {
+		int argCounter = 0;
 		if (isIdentifier(false))
 			if (symbolTable.valueExists(tokens.token())) {
-				writer.println(symbolTableXML(tokens.token()));
+
 				tokens.advance();
 			} else {
-				writeAndAdvance();
+				advance();
 				System.out.println("WARNING:: NAME CALLED " + tokens.token()
 						+ " WASNT FOUND IN VARIABLE SCOPE, COMPILER GOING TO GUESS ITS A STATIC CLASS.");
 			}
 
 		if (isSymbol("(", false)) {
-			writeAndAdvance();
-
+			advance();
 			if (isExpression())
 				while (!isSymbol(")", false)) {
-					compileExpression();
 
+					compileExpression();
+					argCounter++;
 					if (isSymbol(")", true))
 						break;
 
 					isSymbol(",", true);
-					writeAndAdvance();
+
+					advance();
 				}
+			writer.writeCall(className + "." + calleeName, argCounter);
 		}
 
 		else if (isSymbol(".", true)) {
-			writeAndAdvance();
+
+			advance();
 
 			isIdentifier(true);
-			writeAndAdvance();
+			String finalCallerName = calleeName + "." + tokens.token();
+			advance();
 
 			isSymbol("(", true);
-			writeAndAdvance();
+			advance();
 
 			while (!isSymbol(")", false)) {
 				compileExpression();
+				argCounter++;
 				if (isSymbol(",", true))
-					writeAndAdvance();
+					advance();
 			}
+			writer.writeCall(finalCallerName, argCounter);
 
 		}
-		// TODO check if this didnt break anything l8r
+
 		isSymbol(")", true);
-		writeAndAdvance();
-		writeCloser("subroutineCall");
+		advance();
 
 	}
 
 	private void compileExpression() {
+		isUnaryOp = true;
 
-		writeOpener("expression");
 		compileTerm();
+		isUnaryOp = false;
 
 		while (isOp()) {
-
+			String op = tokens.symbol();
 			if (isUnaryOp())
 				compileTerm();
 			else {
-				writeAndAdvance();
+				advance();
 				compileTerm();
+				writer.writeArithmetic(opToCommand(op, isUnaryOp()));
 			}
+
 		}
 
-		writeCloser("expression");
 	}
 
 	private boolean isOp() {
@@ -536,39 +519,8 @@ public class CompilationEngine {
 		return tokens.token().matches("true|false|null|this");
 	}
 
-	private void writeXMLType(String inside, String body) {
-
-		writer.println("<" + inside + "> " + body + " </" + inside + ">");
-	}
-
-	private void writeAndAdvance() {
-		writeXMLOutput();
-
+	private void advance() {
 		tokens.advance();
-	}
-
-	private void writeXMLOutput() {
-
-		writeXMLType(tokenType().toLowerCase(), tokens.token());
-	}
-
-	private void writeXMLOutput(String s) {
-
-		writeXMLType(tokenType().toLowerCase(), s);
-	}
-
-	private void writeXMLOutput(String s, TokenType e) {
-		writeXMLType(e.toString().toLowerCase(), s);
-	}
-
-	private void writeOpener(String inside) {
-
-		writer.println("<" + inside + ">");
-	}
-
-	private void writeCloser(String inside) {
-
-		writer.println("</" + inside + ">");
 	}
 
 	public void closeWriter() {
@@ -644,7 +596,7 @@ public class CompilationEngine {
 	}
 
 	private boolean isUnaryOp() {
-		return tokens.token().equals("-") || tokens.token().equals("~");
+		return isUnaryOp && (tokens.token().equals("-") || tokens.token().equals("~"));
 	}
 
 	private String symbolTableXML(Kind kind, String name, String type, int location) {

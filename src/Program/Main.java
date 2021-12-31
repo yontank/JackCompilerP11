@@ -1,3 +1,4 @@
+package Program;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -44,7 +45,7 @@ run();
 	public static void run() {
 		long start = System.nanoTime();
 		System.out.println("STARTING");
-		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\10\\ArrayTest\\Main.jack";
+		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\10\\IHATEREGEX\\Main.jack";
 		JackTockenizer tockenizer = new JackTockenizer(new File(filePath));
 		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\XML.jack"), tockenizer);
 

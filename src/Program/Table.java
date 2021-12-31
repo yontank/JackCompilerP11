@@ -1,3 +1,4 @@
+package Program;
 
 public class Table {
 	private Kind kind;
