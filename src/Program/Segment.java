@@ -1,4 +1,4 @@
 package Program;
 public enum Segment{
-	CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
+	CONSTANT, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
 }

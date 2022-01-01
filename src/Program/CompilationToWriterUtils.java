@@ -18,7 +18,7 @@ public class CompilationToWriterUtils {
 		return swaptoSegment(table.getKind());
 	}
 
-	public static Command opToCommand(String op, boolean isUnary) {
+	public static Command opToCommand(String op, boolean isUnary, VMWriter writer) {
 		char c = op.charAt(0);
 		System.out.println("CHARACTER IS == " + c);
 		switch (c) {
@@ -41,8 +41,15 @@ public class CompilationToWriterUtils {
 			return Command.AND;
 		case '|':
 			return Command.OR;
-		default:
+		case '*':
+			writer.writeCall("Math.multiply", 2);
 			return Command.NONE;
+		case '/':
+			writer.writeCall("Math.divison", 2);
+			return Command.NONE;
+			default:
+				return Command.NONE;
 		}
 	}
+
 }

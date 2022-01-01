@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 
 // 6.12.21 everything works good FOR NOW, make a method that gets all the files jack files if File is directory
 //TODO 12.27.21 build scoping for if, elif, while. 
+//TODO 1.1.22 (wow, times flies fast)build flow control, after that build a return checker, for example if i call return <EXPRESSION> check if the expression is the same as function return signature.
 public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException {
@@ -45,9 +46,9 @@ run();
 	public static void run() {
 		long start = System.nanoTime();
 		System.out.println("STARTING");
-		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\10\\IHATEREGEX\\Main.jack";
+		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\nand2tetris\\projects\\11\\Seven\\Main.jack";
 		JackTockenizer tockenizer = new JackTockenizer(new File(filePath));
-		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\XML.jack"), tockenizer);
+		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\out.vm"), tockenizer);
 
 		engine.compileClass();
 		engine.closeWriter();

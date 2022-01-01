@@ -60,8 +60,8 @@ public class VMWriter {
 	 * OBOMINATION.
 	 */
 	public void writeBoolean(String val) {
-		writePush(Segment.CONST, 5);
-		writePush(Segment.CONST, 5);
+		writePush(Segment.CONSTANT, 5);
+		writePush(Segment.CONSTANT, 5);
 		if (val.equals("true"))
 			writeArithmetic(Command.EQ);
 		else

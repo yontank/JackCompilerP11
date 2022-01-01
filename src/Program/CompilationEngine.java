@@ -55,11 +55,9 @@ public class CompilationEngine {
 
 		eat("constructor|method|function");
 		boolean isMethod = tokens.token().equals("method");
-
-		if (isMethod) {
+//TODO why is method here??? it should be  on var only. check if correct l8r
+		if (isMethod)
 			symbolTable.define("this", className, Kind.ARG);
-
-		}
 
 		advance();
 
@@ -68,23 +66,24 @@ public class CompilationEngine {
 			tokens.advance();
 
 		isIdentifier(true);
-
+		String functionName = tokens.token();
 		tokens.advance();
 
 		isSymbol("(", true);
 
-		compileParamList();
+		int n = compileParamList();
 
 		isSymbol(")", true);
 
 		tokens.advance();
 
+		writer.writeFunction(className + "." + functionName, n);
 		compileSubroutineBody();
 
 	}
 
-	private void compileParamList() {
-
+	private int compileParamList() {
+		int counter = 0;
 		tokens.advance();
 
 		while (!tokens.token().equals(")")) {
@@ -98,13 +97,15 @@ public class CompilationEngine {
 
 			tokens.advance();
 			symbolTable.define(name, type, Kind.ARG);
-
+			counter++;
 			if (eatNoError(",")) {
 
 				tokens.advance();
 			}
 
 		}
+		System.out.println("Param List Counter: " + counter);
+		return counter;
 	}
 
 	private void compileSubroutineBody() {
@@ -171,6 +172,7 @@ public class CompilationEngine {
 			compileExpression();
 
 		isSymbol(";", true);
+		writer.writeReturn();
 		advance();
 
 	}
@@ -376,7 +378,7 @@ public class CompilationEngine {
 		boolean isKeyWord = isKeyWordConstant();
 
 		if (isIntegerConstant) {
-			writer.writePush(Segment.CONST, tokens.intVal());
+			writer.writePush(Segment.CONSTANT, tokens.intVal());
 			advance();
 		}
 
@@ -429,7 +431,7 @@ public class CompilationEngine {
 			isUnaryOp = false;
 			compileTerm();
 
-			writer.writeArithmetic(opToCommand(op, true));
+			writer.writeArithmetic(opToCommand(op, true, writer));
 
 		}
 
@@ -503,7 +505,7 @@ public class CompilationEngine {
 			else {
 				advance();
 				compileTerm();
-				writer.writeArithmetic(opToCommand(op, isUnaryOp()));
+				writer.writeArithmetic(opToCommand(op, isUnaryOp(), writer));
 			}
 
 		}
