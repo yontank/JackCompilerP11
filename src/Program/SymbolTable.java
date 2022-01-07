@@ -9,8 +9,9 @@ public class SymbolTable {
 	HashMap<String, Table> classTable, subTable;
 	HashMap<Kind, Integer> indexCounter;
 	private LinkedList<HashMap<String, Table>> scoping;
-	private boolean isMethod, isVoid;
-
+	private boolean isVoid;
+	private String functionType;
+	
 	public SymbolTable() {
 		classTable = new HashMap<>();
 		subTable = new HashMap<>();
@@ -20,14 +21,16 @@ public class SymbolTable {
 
 	}
 
-	public void setisMethod(boolean method) {
-		isMethod = method;
+	public void setFunctionType(String method) {
+		functionType = method;
 	}
 
 	public boolean isMethod() {
-		return isMethod;
+		return functionType.equals("method");
 	}
-
+	public boolean isConstructor() {
+		return functionType.equals("constructor");
+	}
 	public void createScope() {
 		scoping.addFirst(new HashMap<>());
 	}
@@ -132,6 +135,7 @@ public class SymbolTable {
 	public boolean isVoid() {
 		return isVoid;
 	}
+
 	public void setIsVoid(String name) {
 		isVoid = name.equals("void");
 	}
