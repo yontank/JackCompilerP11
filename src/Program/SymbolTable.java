@@ -1,4 +1,5 @@
 package Program;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -8,6 +9,7 @@ public class SymbolTable {
 	HashMap<String, Table> classTable, subTable;
 	HashMap<Kind, Integer> indexCounter;
 	private LinkedList<HashMap<String, Table>> scoping;
+	private boolean isMethod, isVoid;
 
 	public SymbolTable() {
 		classTable = new HashMap<>();
@@ -16,6 +18,14 @@ public class SymbolTable {
 		initializeCounter();
 		scoping = new LinkedList<>();
 
+	}
+
+	public void setisMethod(boolean method) {
+		isMethod = method;
+	}
+
+	public boolean isMethod() {
+		return isMethod;
 	}
 
 	public void createScope() {
@@ -35,11 +45,11 @@ public class SymbolTable {
 		scoping.removeFirst();
 	}
 
-	public boolean withinScope(String name) {
+	private boolean withinScope(String name) {
 		return scoping.stream().anyMatch(e -> e.containsKey(name));
 	}
 
-	public boolean valueExists(String name) {
+	private boolean valueExists(String name) {
 		return subTable.keySet().stream().anyMatch(name::equals) || classTable.keySet().stream().anyMatch(name::equals);
 	}
 
@@ -117,5 +127,12 @@ public class SymbolTable {
 			System.out.println("WARNING:: Didn't find " + name + ", is it a function/class name?");
 			return null;
 		}
+	}
+
+	public boolean isVoid() {
+		return isVoid;
+	}
+	public void setIsVoid(String name) {
+		isVoid = name.equals("void");
 	}
 }

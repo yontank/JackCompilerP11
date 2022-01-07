@@ -55,17 +55,15 @@ public class VMWriter {
 		writer.println("return");
 	}
 
-	/**
-	 * NOT SURE HOW TO WRITE BOOLEANS IN VM TRANSLATOR, SO IM DOING THIS
-	 * OBOMINATION.
-	 */
+	
 	public void writeBoolean(String val) {
-		writePush(Segment.CONSTANT, 5);
-		writePush(Segment.CONSTANT, 5);
-		if (val.equals("true"))
-			writeArithmetic(Command.EQ);
-		else
-			writeArithmetic(Command.GT);
+
+		if (val.equals("false"))
+			writePush(Segment.CONSTANT, 0);
+		else {
+			writePush(Segment.CONSTANT, 1);
+			writeArithmetic(Command.NEG);
+		}
 	}
 
 	public void close() {

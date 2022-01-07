@@ -45,6 +45,7 @@ public class CompilationEngine {
 				compileSubroutineDec();
 
 		}
+
 		isSymbol("}", true);
 
 	}
@@ -55,12 +56,12 @@ public class CompilationEngine {
 
 		eat("constructor|method|function");
 		boolean isMethod = tokens.token().equals("method");
-//TODO why is method here??? it should be  on var only. check if correct l8r
-		if (isMethod)
-			symbolTable.define("this", className, Kind.ARG);
 
+		symbolTable.setisMethod(isMethod);
 		advance();
 
+		symbolTable.setIsVoid(tokens.token());
+	
 		if (eatNoError("void") || isType())
 
 			tokens.advance();
@@ -71,19 +72,18 @@ public class CompilationEngine {
 
 		isSymbol("(", true);
 
-		int n = compileParamList();
+		compileParamList();
 
 		isSymbol(")", true);
 
 		tokens.advance();
 
-		writer.writeFunction(className + "." + functionName, n);
-		compileSubroutineBody();
+		compileSubroutineBody(functionName);
 
 	}
 
-	private int compileParamList() {
-		int counter = 0;
+	private void compileParamList() {
+		
 		tokens.advance();
 
 		while (!tokens.token().equals(")")) {
@@ -97,40 +97,45 @@ public class CompilationEngine {
 
 			tokens.advance();
 			symbolTable.define(name, type, Kind.ARG);
-			counter++;
+			
 			if (eatNoError(",")) {
 
 				tokens.advance();
 			}
 
 		}
-		System.out.println("Param List Counter: " + counter);
-		return counter;
+	
+		
 	}
 
-	private void compileSubroutineBody() {
+	private void compileSubroutineBody(String functionName) {
 
 		isSymbol("{", true);
 
 		tokens.advance();
 		// add statements
-		checkVarOrStatement();
+		checkVar();
+		writer.writeFunction(className + "." + functionName, symbolTable.varCount(Kind.VAR));
+		statements();
 		isSymbol("}", true);
 
 		tokens.advance();
+		
+		if (symbolTable.isVoid())
+			writer.writePush(Segment.CONSTANT, 0);
+		
+		writer.writeReturn();
 
 	}
 
-	private void checkVarOrStatement() {
-		while (eatNoError("var") || isStatement()) {
+	private void checkVar() {
+		while (eatNoError("var")) {
 			if (eatNoError("}"))
 				break;
 
 			if (eatNoError("var"))
 				varDec();
 
-			if (isStatement())
-				statements();
 		}
 	}
 
@@ -172,6 +177,7 @@ public class CompilationEngine {
 			compileExpression();
 
 		isSymbol(";", true);
+	
 		writer.writeReturn();
 		advance();
 
@@ -182,8 +188,8 @@ public class CompilationEngine {
 		isKeyWord(KeyWords.DO);
 		advance();
 
-		compileSubourtineCall(tokens.token());
-
+		compileSubroutineCall(tokens.token());
+		writer.writePop(Segment.TEMP, 0);
 		isSymbol(";", true);
 		advance();
 
@@ -206,8 +212,8 @@ public class CompilationEngine {
 		advance();
 		symbolTable.createScope();
 
-		checkVarOrStatement();
-
+		checkVar();
+		statements();
 		isSymbol("}", true);
 		advance();
 		symbolTable.removeScope();
@@ -231,8 +237,8 @@ public class CompilationEngine {
 		symbolTable.createScope();
 		advance();
 
-		checkVarOrStatement();
-
+		checkVar();
+		statements();
 		isSymbol("}", true);
 		symbolTable.removeScope();
 		advance();
@@ -245,8 +251,8 @@ public class CompilationEngine {
 			symbolTable.createScope();
 			advance();
 
-			checkVarOrStatement();
-
+			checkVar();
+			statements();
 			isSymbol("}", true);
 			advance();
 			symbolTable.removeScope();
@@ -382,14 +388,20 @@ public class CompilationEngine {
 			advance();
 		}
 
-		else if (isKeyWord) { // TODO add other keywords
+		else if (isKeyWord) {
 			if (tokens.token().matches("true|false"))
 				writer.writeBoolean(tokens.token());
+			else if (tokens.token().equals("null"))
+				writer.writePush(Segment.CONSTANT, 0);
+			else if (tokens.token().equals("this"))
+				writer.writePush(Segment.POINTER, 0);
+			else if (tokens.token().equals("that"))
+				writer.writePush(Segment.POINTER, 1);
 			advance();
 		}
 
 		else if (isIdentifier(false)) {
-			if (symbolTable.valueExists(tokens.token()))
+			if (symbolTable.containsVariable(tokens.token()))
 				writer.writePush(swaptoSegment(symbolTable.getTable(tokens.token()).getKind()),
 						symbolTable.getTable(tokens.token()).getNumber());
 			String calleeName = tokens.token();
@@ -406,7 +418,7 @@ public class CompilationEngine {
 			}
 
 			else if (isSymbol("(", false) || isSymbol(".", false))
-				compileSubourtineCall(calleeName);
+				compileSubroutineCall(calleeName);
 
 		}
 
@@ -437,10 +449,12 @@ public class CompilationEngine {
 
 	}
 
-	private void compileSubourtineCall(String calleeName) {
+	private void compileSubroutineCall(String calleeName) {
 		int argCounter = 0;
+		boolean isObject = symbolTable.containsVariable(calleeName);
+
 		if (isIdentifier(false))
-			if (symbolTable.valueExists(tokens.token())) {
+			if (symbolTable.containsVariable(tokens.token())) {
 
 				tokens.advance();
 			} else {
@@ -467,11 +481,21 @@ public class CompilationEngine {
 		}
 
 		else if (isSymbol(".", true)) {
+			if (isObject) {
+				if (symbolTable.isMethod() && swapToSegment(symbolTable.getTable(calleeName)).equals(Segment.ARG))
+					writer.writePush(Segment.ARG, symbolTable.getTable(calleeName).getNumber() + 1);
+				else
+					writer.writePush(swapToSegment(symbolTable.getTable(calleeName)),
+							symbolTable.getTable(calleeName).getNumber());
 
+			}
 			advance();
 
 			isIdentifier(true);
+
 			String finalCallerName = calleeName + "." + tokens.token();
+			if (isObject)
+				finalCallerName = symbolTable.getTable(calleeName).getType() + "." + tokens.token();
 			advance();
 
 			isSymbol("(", true);
@@ -483,6 +507,9 @@ public class CompilationEngine {
 				if (isSymbol(",", true))
 					advance();
 			}
+			if (isObject)
+				argCounter++;
+
 			writer.writeCall(finalCallerName, argCounter);
 
 		}
@@ -518,7 +545,7 @@ public class CompilationEngine {
 	}
 
 	private boolean isKeyWordConstant() {
-		return tokens.token().matches("true|false|null|this");
+		return tokens.token().matches("true|false|null|this|that");
 	}
 
 	private void advance() {
