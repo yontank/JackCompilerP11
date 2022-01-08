@@ -12,6 +12,8 @@ public class CompilationEngine {
 	private SymbolTable symbolTable;
 	private String className;
 	private boolean isUnaryOp;
+	private int ifLabelCounter, whileLabelCounter;
+	
 
 	public CompilationEngine(File file, JackTockenizer tockenizer) {
 		this.tokens = tockenizer;
@@ -32,6 +34,8 @@ public class CompilationEngine {
 		isIdentifier(true);
 
 		className = tokens.token();
+	
+
 		tokens.advance();
 
 		isSymbol("{", true);
@@ -56,11 +60,11 @@ public class CompilationEngine {
 
 		eat("constructor|method|function");
 
-		symbolTable.setFunctionType(tokens.token());
+		symbolTable.setMethodType(tokens.token());
 
 		advance();
 
-		symbolTable.setIsVoid(tokens.token());
+		symbolTable.setReturnType(tokens.token());
 
 		if (eatNoError("void") || isType())
 
@@ -122,18 +126,15 @@ public class CompilationEngine {
 		} else if (symbolTable.isConstructor()) {
 			int vars = symbolTable.varCount(Kind.FIELD);
 			writer.writePush(Segment.CONSTANT, vars);
-			writer.writeCall("Memory.alloc", vars);
+			writer.writeCall("Memory.alloc", 1);
 			writer.writePop(Segment.POINTER, 0);
 		}
 		statements();
 		isSymbol("}", true);
 
 		tokens.advance();
-
-		if (symbolTable.isVoid()) {
-			writer.writePush(Segment.CONSTANT, 0);
-			writer.writeReturn();
-		}
+		
+		
 	}
 
 	private void checkVar() {
@@ -181,10 +182,18 @@ public class CompilationEngine {
 		isKeyWord(KeyWords.RETURN);
 		advance();
 
-		if (!isSymbol(";", false))
+		boolean isVoid = symbolTable.getReturnType().equals("void");
+		System.out.println("ISVOID?: " + isVoid);
+		
+		if (!isSymbol(";", false) && !isVoid)
 			compileExpression();
+		else if (!isSymbol(";", false) && isVoid)
+			throw new IllegalStateException("An Expression in void statement. aborting");
 
 		isSymbol(";", true);
+
+		if (isVoid)
+			writer.writePush(Segment.CONSTANT, 0);
 
 		writer.writeReturn();
 		advance();
@@ -204,16 +213,20 @@ public class CompilationEngine {
 	}
 
 	private void compileWhile() {
-
+		int localLabel = whileLabelCounter;
 		isKeyWord(KeyWords.WHILE);
 		advance();
 
 		isSymbol("(", true);
 		advance();
-
+		writer.writeLabel("whileL" + localLabel);
 		compileExpression();
+		localLabel++;
+		whileLabelCounter += 2;
+		writer.writeArithmetic(Command.NOT);
 
 		isSymbol(")", true);
+		writer.writeIf("whileL" + localLabel);
 		advance();
 
 		isSymbol("{", true);
@@ -222,14 +235,16 @@ public class CompilationEngine {
 
 		checkVar();
 		statements();
+		writer.writeGoto("whileL" + (localLabel - 1));
 		isSymbol("}", true);
 		advance();
 		symbolTable.removeScope();
+		writer.writeLabel("whileL" + localLabel);
 
 	}
 
 	private void compileIf() {
-
+		int localIfLabel = ifLabelCounter;
 		isKeyWord(KeyWords.IF);
 		advance();
 
@@ -241,18 +256,26 @@ public class CompilationEngine {
 		isSymbol(")", true);
 		advance();
 
+		writer.writeArithmetic(Command.NOT);
+		writer.writeIf("ifL" + localIfLabel);
+		localIfLabel++;
+		// if its called recursively, give it a new labelCounter.
+		ifLabelCounter += 2;
+
 		isSymbol("{", true);
 		symbolTable.createScope();
 		advance();
 
 		checkVar();
 		statements();
+
 		isSymbol("}", true);
+		writer.writeGoto("ifL" + localIfLabel);
 		symbolTable.removeScope();
 		advance();
 
 		if (eatNoError("else")) {
-
+			writer.writeLabel("ifL" + (localIfLabel - 1));
 			advance();
 
 			isSymbol("{", true);
@@ -260,12 +283,16 @@ public class CompilationEngine {
 			advance();
 
 			checkVar();
+
 			statements();
+
 			isSymbol("}", true);
 			advance();
 			symbolTable.removeScope();
 
 		}
+		writer.writeLabel("ifL" + localIfLabel);
+		localIfLabel++;
 
 	}
 
@@ -565,9 +592,7 @@ public class CompilationEngine {
 		writer.close();
 	}
 
-	private String tokenType() {
-		return tokens.tokenType().toString();
-	}
+
 
 	private boolean eat(String eToken, TokenType eType) {
 		return eat(eToken) && eat(eType);
@@ -637,22 +662,7 @@ public class CompilationEngine {
 		return isUnaryOp && (tokens.token().equals("-") || tokens.token().equals("~"));
 	}
 
-	private String symbolTableXML(Kind kind, String name, String type, int location) {
-		return "<" + type + "_" + kind.toString().toLowerCase() + "_" + location + "> " + name + "</" + type + "_"
-				+ kind.toString().toLowerCase() + "_" + location + ">";
-	}
 
-	private String symbolTableXML(String name) {
-
-		Table table = symbolTable.getTable(name);
-		if (table != null)
-			return symbolTableXML(table.getKind(), name, table.getType(), table.getNumber());
-		else
-			return "<" +
-
-					tokenType().toLowerCase() + "> " + name + " </" + tokenType().toLowerCase() + ">";
-
-	}
 
 	private Kind checkKind() {
 		return Kind.valueOf(tokens.token().toUpperCase());

@@ -9,9 +9,18 @@ public class SymbolTable {
 	HashMap<String, Table> classTable, subTable;
 	HashMap<Kind, Integer> indexCounter;
 	private LinkedList<HashMap<String, Table>> scoping;
-	private boolean isVoid;
-	private String functionType;
-	
+	private String subroutineName, returnType;
+	private String methodType;
+
+
+	public String getSubroutineName() {
+		return subroutineName;
+	}
+
+	public void setSubroutineName(String subroutineName) {
+		this.subroutineName = subroutineName;
+	}
+
 	public SymbolTable() {
 		classTable = new HashMap<>();
 		subTable = new HashMap<>();
@@ -21,16 +30,10 @@ public class SymbolTable {
 
 	}
 
-	public void setFunctionType(String method) {
-		functionType = method;
+	public boolean isConstructor() {
+		return methodType.equals("constructor");
 	}
 
-	public boolean isMethod() {
-		return functionType.equals("method");
-	}
-	public boolean isConstructor() {
-		return functionType.equals("constructor");
-	}
 	public void createScope() {
 		scoping.addFirst(new HashMap<>());
 	}
@@ -49,10 +52,14 @@ public class SymbolTable {
 	}
 
 	private boolean withinScope(String name) {
+		if (name == null)
+			return false;
 		return scoping.stream().anyMatch(e -> e.containsKey(name));
 	}
 
 	private boolean valueExists(String name) {
+		if (name == null)
+			return false;
 		return subTable.keySet().stream().anyMatch(name::equals) || classTable.keySet().stream().anyMatch(name::equals);
 	}
 
@@ -132,11 +139,24 @@ public class SymbolTable {
 		}
 	}
 
-	public boolean isVoid() {
-		return isVoid;
+	public boolean isMethod() {
+		return methodType.equals("method");
 	}
 
-	public void setIsVoid(String name) {
-		isVoid = name.equals("void");
+	public String getReturnType() {
+		return returnType;
 	}
+
+	public void setReturnType(String returnType) {
+		this.returnType = returnType;
+	}
+
+	public String getMethodType() {
+		return methodType;
+	}
+
+	public void setMethodType(String methodType) {
+		this.methodType = methodType;
+	}
+
 }

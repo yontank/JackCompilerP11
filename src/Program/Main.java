@@ -31,7 +31,7 @@ run();
 
 		int i = 0;
 		Scanner scanner = new Scanner(new BufferedReader(new FileReader(file)));
-
+		
 		while (scanner.hasNextLine()) {
 			String input = scanner.nextLine();
 
@@ -46,7 +46,7 @@ run();
 	public static void run() {
 		long start = System.nanoTime();
 		System.out.println("STARTING");
-		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\projects\\10\\IHATEREGEX\\Point.jack";
+		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\projects\\11\\Seven\\Main.jack";
 		JackTockenizer tockenizer = new JackTockenizer(new File(filePath));
 		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\out.vm"), tockenizer);
 
