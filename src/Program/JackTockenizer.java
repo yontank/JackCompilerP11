@@ -112,6 +112,8 @@ public class JackTockenizer {
 			if (Main.isSymbol(token.charAt(0)) || lastSymbol) {
 				lastSymbol = !lastSymbol;
 				builder.append(token);
+				if(token.charAt(0) == ',' || token.charAt(0) == '.')
+					builder.append(' ');
 				continue;
 			}
 
@@ -120,7 +122,7 @@ public class JackTockenizer {
 
 		} while (tokenType().equals(TokenType.STRING_CONST));
 		builder.deleteCharAt(builder.length() - 1);
-
+		builder.append(' ');
 		return builder.toString();
 	}
 

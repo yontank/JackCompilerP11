@@ -1,6 +1,8 @@
 package Program;
 
 public class CompilationToWriterUtils {
+	public static final int THIS_POINTER = 0, THAT_POINTER = 1;
+
 	public static Segment swaptoSegment(Kind kind) {
 		switch (kind) {
 		case STATIC:
@@ -8,7 +10,7 @@ public class CompilationToWriterUtils {
 		case FIELD:
 			return Segment.THIS;
 		case ARG:
-			return Segment.ARG;
+			return Segment.ARGUMENT;
 		default:
 			return Segment.LOCAL;
 		}
@@ -36,7 +38,10 @@ public class CompilationToWriterUtils {
 		case '<':
 			return Command.LT;
 		case '~':
+			if(isUnary) 
 			return Command.NOT;
+			else
+				return Command.NONE;
 		case '&':
 			return Command.AND;
 		case '|':
@@ -45,10 +50,10 @@ public class CompilationToWriterUtils {
 			writer.writeCall("Math.multiply", 2);
 			return Command.NONE;
 		case '/':
-			writer.writeCall("Math.divison", 2);
+			writer.writeCall("Math.divide", 2);
 			return Command.NONE;
-			default:
-				return Command.NONE;
+		default:
+			return Command.NONE;
 		}
 	}
 

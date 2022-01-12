@@ -1,10 +1,10 @@
 package Program;
 
-import static Program.CompilationToWriterUtils.opToCommand;
-import static Program.CompilationToWriterUtils.swapToSegment;
-import static Program.CompilationToWriterUtils.swaptoSegment;
+import static Program.CompilationToWriterUtils.*;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Iterator;
 
 public class CompilationEngine {
 	private VMWriter writer;
@@ -12,8 +12,7 @@ public class CompilationEngine {
 	private SymbolTable symbolTable;
 	private String className;
 	private boolean isUnaryOp;
-	private int ifLabelCounter, whileLabelCounter;
-	
+	private static int ifLabelCounter, whileLabelCounter;
 
 	public CompilationEngine(File file, JackTockenizer tockenizer) {
 		this.tokens = tockenizer;
@@ -34,7 +33,6 @@ public class CompilationEngine {
 		isIdentifier(true);
 
 		className = tokens.token();
-	
 
 		tokens.advance();
 
@@ -121,7 +119,7 @@ public class CompilationEngine {
 		writer.writeFunction(className + "." + functionName, symbolTable.varCount(Kind.VAR));
 
 		if (symbolTable.isMethod()) {
-			writer.writePush(Segment.ARG, 0);
+			writer.writePush(Segment.ARGUMENT, 0);
 			writer.writePop(Segment.POINTER, 0);
 		} else if (symbolTable.isConstructor()) {
 			int vars = symbolTable.varCount(Kind.FIELD);
@@ -133,8 +131,7 @@ public class CompilationEngine {
 		isSymbol("}", true);
 
 		tokens.advance();
-		
-		
+
 	}
 
 	private void checkVar() {
@@ -184,7 +181,7 @@ public class CompilationEngine {
 
 		boolean isVoid = symbolTable.getReturnType().equals("void");
 		System.out.println("ISVOID?: " + isVoid);
-		
+
 		if (!isSymbol(";", false) && !isVoid)
 			compileExpression();
 		else if (!isSymbol(";", false) && isVoid)
@@ -274,8 +271,9 @@ public class CompilationEngine {
 		symbolTable.removeScope();
 		advance();
 
+		writer.writeLabel("ifL" + (localIfLabel - 1));
 		if (eatNoError("else")) {
-			writer.writeLabel("ifL" + (localIfLabel - 1));
+		
 			advance();
 
 			isSymbol("{", true);
@@ -292,7 +290,6 @@ public class CompilationEngine {
 
 		}
 		writer.writeLabel("ifL" + localIfLabel);
-		localIfLabel++;
 
 	}
 
@@ -305,23 +302,45 @@ public class CompilationEngine {
 		isIdentifier(true);
 		if (!symbolTable.containsVariable(tokens.token()))
 			throw new IllegalStateException("NO VARIABLE FOUND NAMED " + tokens.token() + " WITHIN SCOPE");
+
 		String popVariable = tokens.token();
+
+		boolean isArray = false, secondArray = false;
+		;
+
 		tokens.advance();
 
 		if (isSymbol("[", false)) {
+			isArray = true;
+			writer.writePush(swapToSegment(symbolTable.getTable(popVariable)),
+					symbolTable.getTable(popVariable).getNumber());
+
 			advance();
 			compileExpression();
+			writer.writeArithmetic(Command.ADD);
 			isSymbol("]", true);
+
 			advance();
 		}
 		isSymbol("=", true);
 		advance();
 
+		secondArray = isSymbol("[", false);
+
 		compileExpression();
 
 		isSymbol(";", true);
-		writer.writePop(swapToSegment(symbolTable.getTable(popVariable)),
-				symbolTable.getTable(popVariable).getNumber());
+
+		if (!isArray)
+			writer.writePop(swapToSegment(symbolTable.getTable(popVariable)),
+					symbolTable.getTable(popVariable).getNumber());
+		else {
+			writer.writePop(Segment.TEMP, 0);
+			writer.writePop(Segment.POINTER, 1);
+			writer.writePush(Segment.TEMP, 0);
+			writer.writePop(Segment.THAT, 0);
+		}
+
 		advance();
 
 	}
@@ -436,23 +455,21 @@ public class CompilationEngine {
 		}
 
 		else if (isIdentifier(false)) {
-			if (symbolTable.containsVariable(tokens.token())) {
-				if (symbolTable.isMethod() && swapToSegment(symbolTable.getTable(tokens.token())).equals(Segment.ARG))
-					writer.writePush(Segment.ARG, symbolTable.getTable(tokens.token()).getNumber() + 1);
-				else
-					writer.writePush(swapToSegment(symbolTable.getTable(tokens.token())),
-							symbolTable.getTable(tokens.token()).getNumber());
-			}
-
 			String calleeName = tokens.token();
-
 			tokens.advance();
 
 			if (isSymbol("[", false)) {
+				writer.writePush(swapToSegment(symbolTable.getTable(calleeName)),
+						symbolTable.getTable(calleeName).getNumber());
+
 				advance();
 				compileExpression();
-
+				writer.writeArithmetic(Command.ADD);
 				isSymbol("]", true);
+				// setting b[j] value into temp
+				writer.writePop(Segment.POINTER, THAT_POINTER);
+				writer.writePush(Segment.THAT, 0);
+
 				advance();
 
 			}
@@ -461,12 +478,41 @@ public class CompilationEngine {
 
 				compileSubroutineCall(calleeName);
 			}
+
+			else if (symbolTable.containsVariable(tokens.token())) {
+				if (symbolTable.isMethod()
+						&& swapToSegment(symbolTable.getTable(tokens.token())).equals(Segment.ARGUMENT))
+					writer.writePush(Segment.ARGUMENT, symbolTable.getTable(tokens.token()).getNumber() + 1);
+				else
+					writer.writePush(swapToSegment(symbolTable.getTable(tokens.token())),
+							symbolTable.getTable(tokens.token()).getNumber());
+
+			} else if (Main.isSymbol(tokens.token().charAt(0))) {
+				if (symbolTable.containsVariable(calleeName)) {
+					if (symbolTable.isMethod()
+							&& swapToSegment(symbolTable.getTable(calleeName)).equals(Segment.ARGUMENT))
+						writer.writePush(Segment.ARGUMENT, symbolTable.getTable(calleeName).getNumber() + 1);
+					else
+						writer.writePush(swapToSegment(symbolTable.getTable(calleeName)),
+								symbolTable.getTable(calleeName).getNumber());
+				}
+			}
 		}
 
 		else if (isStringConstant) {
 			if (isSymbol("\"", true))
 				advance();
-			tokens.stringVal();
+
+			String token = tokens.stringVal();
+
+			writer.writePush(Segment.CONSTANT, token.length());
+			writer.writeCall("String.new", 1);
+
+			for (char c : token.toCharArray()) {
+				writer.writePush(Segment.CONSTANT, (int) c);
+				writer.writeCall("String.appendChar", 2);
+			}
+
 			isSymbol("\"", true);
 			advance();
 
@@ -482,9 +528,11 @@ public class CompilationEngine {
 		} else if (isUnaryOp()) {
 			String op = tokens.token();
 			advance();
-			isUnaryOp = false;
+			
 			compileTerm();
-
+			
+			
+			isUnaryOp = false;
 			writer.writeArithmetic(opToCommand(op, true, writer));
 
 		}
@@ -508,6 +556,7 @@ public class CompilationEngine {
 
 		if (isSymbol("(", false)) {
 			advance();
+			writer.writePush(Segment.POINTER, THIS_POINTER);
 			if (isExpression())
 				while (!isSymbol(")", false)) {
 
@@ -520,7 +569,8 @@ public class CompilationEngine {
 
 					advance();
 				}
-			writer.writeCall(className + "." + calleeName, argCounter);
+			System.out.println("-- ARG COUNTER -- > " + argCounter);
+			writer.writeCall(className + "." + calleeName, argCounter + 1); // assuming everything is a fucking method if its called locally.
 		}
 
 		else if (isSymbol(".", true)) {
@@ -568,7 +618,8 @@ public class CompilationEngine {
 			else {
 				advance();
 				compileTerm();
-				writer.writeArithmetic(opToCommand(op, isUnaryOp(), writer));
+				
+				writer.writeArithmetic(opToCommand(op, false, writer));
 			}
 
 		}
@@ -591,8 +642,6 @@ public class CompilationEngine {
 	public void closeWriter() {
 		writer.close();
 	}
-
-
 
 	private boolean eat(String eToken, TokenType eType) {
 		return eat(eToken) && eat(eType);
@@ -657,12 +706,13 @@ public class CompilationEngine {
 				"TOKEN: " + tokens.token() + " IS NOT AN IDENTIFIER NOR A KEYWORD THAT IS CONSIDERED A TYPE");
 
 	}
-
+	private boolean isUnaryOp(String op) {
+		return isUnaryOp && (op.equals("-") || op.equals("~"));
+	}
+	
 	private boolean isUnaryOp() {
 		return isUnaryOp && (tokens.token().equals("-") || tokens.token().equals("~"));
 	}
-
-
 
 	private Kind checkKind() {
 		return Kind.valueOf(tokens.token().toUpperCase());

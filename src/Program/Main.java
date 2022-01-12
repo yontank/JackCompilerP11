@@ -1,11 +1,7 @@
 package Program;
-import java.io.BufferedReader;
+
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.util.Scanner;
-
-import org.apache.commons.lang3.StringUtils;
 
 /*
  * A BUG I CREATED IN SPACE CLEANER,
@@ -19,41 +15,41 @@ import org.apache.commons.lang3.StringUtils;
 // 6.12.21 everything works good FOR NOW, make a method that gets all the files jack files if File is directory
 //TODO 12.27.21 build scoping for if, elif, while. 
 //TODO 1.1.22 (wow, times flies fast)build flow control, after that build a return checker, for example if i call return <EXPRESSION> check if the expression is the same as function return signature.
+// TODO 8.1 add something that reads all filesNames, checking the name of each and every className + OS.
 public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException {
-run();
+		run();
 
-	}
-
-	private static void extracted() throws FileNotFoundException {
-		File file = new File("C:\\Users\\User\\Desktop\\XML.jack");
-
-		int i = 0;
-		Scanner scanner = new Scanner(new BufferedReader(new FileReader(file)));
-		
-		while (scanner.hasNextLine()) {
-			String input = scanner.nextLine();
-
-			if (input.contains("expression"))
-				i++;
-
-		}
-
-		System.out.println("expression shows : " + i + " times");
 	}
 
 	public static void run() {
 		long start = System.nanoTime();
 		System.out.println("STARTING");
-		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\projects\\11\\Seven\\Main.jack";
-		JackTockenizer tockenizer = new JackTockenizer(new File(filePath));
-		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\out.vm"), tockenizer);
+		String filePath = "C:\\Users\\User\\Desktop\\nand2tetris\\projects\\11\\Pong\\Ball.jack";
+		File file = new File(filePath);
+		JackTockenizer tockenizer = new JackTockenizer(file);
+		StringBuilder endFilePath = new StringBuilder(file.getName());
+		removeJack(endFilePath);
+		CompilationEngine engine = new CompilationEngine(new File("C:\\Users\\User\\Desktop\\New Folder\\" + endFilePath),
+				tockenizer);
 
 		engine.compileClass();
 		engine.closeWriter();
 		long end = System.nanoTime();
-		System.out.println("FINSHED IN:  " + (end - start)  + " NANO SECONDS ");
+		System.out.println("FINSHED IN:  " + (end - start) + " NANO SECONDS ");
+	}
+
+	private static void removeJack(StringBuilder file) {
+		for (int i = 0; i < 5; i++) {
+			file.deleteCharAt(file.length() - 1);
+		}
+		addVmExtension(file);
+	}
+
+	private static void addVmExtension(StringBuilder builder) {
+		// TODO Auto-generated method stub
+		builder.append(".vm");
 	}
 
 	public static boolean isSymbol(char c) {
