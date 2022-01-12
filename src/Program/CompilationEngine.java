@@ -273,7 +273,7 @@ public class CompilationEngine {
 
 		writer.writeLabel("ifL" + (localIfLabel - 1));
 		if (eatNoError("else")) {
-		
+
 			advance();
 
 			isSymbol("{", true);
@@ -305,7 +305,7 @@ public class CompilationEngine {
 
 		String popVariable = tokens.token();
 
-		boolean isArray = false, secondArray = false;
+		boolean isArray = false;
 		;
 
 		tokens.advance();
@@ -324,8 +324,6 @@ public class CompilationEngine {
 		}
 		isSymbol("=", true);
 		advance();
-
-		secondArray = isSymbol("[", false);
 
 		compileExpression();
 
@@ -528,10 +526,9 @@ public class CompilationEngine {
 		} else if (isUnaryOp()) {
 			String op = tokens.token();
 			advance();
-			
+
 			compileTerm();
-			
-			
+
 			isUnaryOp = false;
 			writer.writeArithmetic(opToCommand(op, true, writer));
 
@@ -543,16 +540,20 @@ public class CompilationEngine {
 		int argCounter = 0;
 		boolean isObject = symbolTable.containsVariable(calleeName);
 
-		if (isIdentifier(false))
-			if (symbolTable.containsVariable(tokens.token())) {
-				writer.writePush(swapToSegment(symbolTable.getTable(tokens.token())),
-						symbolTable.getTable(tokens.token()).getNumber());
-				advance();
-			} else {
-				advance();
-				System.out.println("WARNING:: NAME CALLED " + tokens.token()
-						+ " WASNT FOUND IN VARIABLE SCOPE, COMPILER GOING TO GUESS ITS A STATIC CLASS.");
-			}
+		if(calleeName.equals(tokens.token()))
+			advance();
+		
+		if (isStringIdentifier(calleeName) && isObject) {
+
+			writer.writePush(swapToSegment(symbolTable.getTable(calleeName)),
+					symbolTable.getTable(calleeName).getNumber());
+			
+		} else {
+			
+			System.out.println("WARNING:: NAME CALLED " + calleeName
+					+ " WASNT FOUND IN VARIABLE SCOPE, COMPILER GOING TO GUESS ITS A STATIC CLASS.");
+		}
+		System.out.println("token -> " + tokens.token());
 
 		if (isSymbol("(", false)) {
 			advance();
@@ -570,7 +571,8 @@ public class CompilationEngine {
 					advance();
 				}
 			System.out.println("-- ARG COUNTER -- > " + argCounter);
-			writer.writeCall(className + "." + calleeName, argCounter + 1); // assuming everything is a fucking method if its called locally.
+			writer.writeCall(className + "." + calleeName, argCounter + 1); // assuming everything is a fucking method
+																			// if its called locally.
 		}
 
 		else if (isSymbol(".", true)) {
@@ -605,6 +607,10 @@ public class CompilationEngine {
 
 	}
 
+	private boolean isStringIdentifier(String calleeName) {
+		return tokens.tokenType(calleeName).equals(TokenType.IDENTIFIER);
+	}
+
 	private void compileExpression() {
 		isUnaryOp = true;
 
@@ -618,7 +624,7 @@ public class CompilationEngine {
 			else {
 				advance();
 				compileTerm();
-				
+
 				writer.writeArithmetic(opToCommand(op, false, writer));
 			}
 
@@ -706,10 +712,11 @@ public class CompilationEngine {
 				"TOKEN: " + tokens.token() + " IS NOT AN IDENTIFIER NOR A KEYWORD THAT IS CONSIDERED A TYPE");
 
 	}
+
 	private boolean isUnaryOp(String op) {
 		return isUnaryOp && (op.equals("-") || op.equals("~"));
 	}
-	
+
 	private boolean isUnaryOp() {
 		return isUnaryOp && (tokens.token().equals("-") || tokens.token().equals("~"));
 	}

@@ -16,6 +16,11 @@ import java.io.FileNotFoundException;
 //TODO 12.27.21 build scoping for if, elif, while. 
 //TODO 1.1.22 (wow, times flies fast)build flow control, after that build a return checker, for example if i call return <EXPRESSION> check if the expression is the same as function return signature.
 // TODO 8.1 add something that reads all filesNames, checking the name of each and every className + OS.
+
+
+// TODO 1.12.2022 we finished this, im really proud of you yonatan. :) lets make some great projects together!! Last thing i want you to do, is add some a File reader, get all file names. and save them, if we call something that isn't an identifier, it must be a class name, if it doesnt show from folder OR OS, throw exception.
+
+
 public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException {

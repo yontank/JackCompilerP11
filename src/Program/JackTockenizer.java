@@ -72,6 +72,8 @@ public class JackTockenizer {
 		return TokenType.IDENTIFIER;
 	}
 
+	
+	
 	private HashSet<KeyWords> setKeywords() {
 		return Arrays.stream(KeyWords.values()).collect(Collectors.toCollection(HashSet::new));
 	}
@@ -132,4 +134,27 @@ public class JackTockenizer {
 		}
 	}
 
+
+	public TokenType tokenType(String token) {
+
+		if (keywords.stream().anyMatch(e -> e.name().equals(token.toUpperCase())))
+			return TokenType.KEYWORD;
+
+		else if (token.startsWith("\"") || isString) {
+
+			if (token.startsWith("\""))
+				return TokenType.SYMBOL;
+
+			return TokenType.STRING_CONST;
+
+		}
+
+		else if (token.matches("[^a-zA-Z|^\\d]+") || Main.isSymbol(token.charAt(0)))
+			return TokenType.SYMBOL;
+
+		else if (token.matches("\\d+"))
+			return TokenType.INT_CONST;
+
+		return TokenType.IDENTIFIER;
+	}
 }
