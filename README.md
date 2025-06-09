@@ -1,6 +1,6 @@
 # Jack Assembler
 
-This is an assembler for the Nand2Tetris course, capable of translating `.asm` files written in the Hack assembly language into `.hack` binary files that run on the Hack platform.
+This is an assembler for the Nand2Tetris course, capable of translating `.jack` files written in the Hack assembly language into `.vm` byte code files that run on the Hack platform.
 
 ## 📚 About
 
