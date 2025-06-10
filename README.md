@@ -1,16 +1,48 @@
-# Jack Assembler
+# Jack Compiler (Nand2Tetris Project)
 
-This is an assembler for the Nand2Tetris course, capable of translating `.jack` files written in the Hack assembly language into `.vm` byte code files that run on the Hack platform.
+This project is a full implementation of a **Jack Compiler**, created as part of the Nand2Tetris course. It translates high-level Jack programs into Virtual Machine (VM) code that can be executed on the Hack platform.
 
-## 📚 About
+## 🧠 What It Does
 
-This assembler is part of the [Nand2Tetris](https://www.nand2tetris.org/) course. It implements the two-pass assembler specified in Project 6 of the course, which translates symbolic Hack assembly code into 16-bit binary machine code.
+The compiler reads `.jack` source code and outputs `.vm` files. It performs the following main tasks:
 
-## 🚀 Features
+1. **Tokenization**  
+   Breaks the input source code into a sequence of tokens (keywords, symbols, identifiers, etc.).
 
-- Fully supports the Hack assembly language as specified in the Nand2Tetris book.
-- Implements:
-  - Symbol resolution (labels and variables)
-  - A-instructions (`@value`)
-  - C-instructions (`dest=comp;jump`)
-- Supports predefined symbols (`SP`, `LCL`, `ARG`, `THIS`, `THAT`, `R0` to `R15`, `SCREEN`, `KBD`).
+2. **Parsing / Compilation**  
+   Analyzes the structure of the code based on Jack's grammar and builds a syntax tree representing the program.
+
+3. **Symbol Table Management**  
+   Tracks variables, arguments, class fields, and subroutines across different scopes to ensure correct references and memory usage.
+
+4. **VM Code Generation**  
+   Translates the parsed syntax into VM commands that conform to the Nand2Tetris virtual machine specification.
+
+## 🚀 How to Use
+
+Compile the Java project using a standard Java compiler or IDE, then run the compiler on a `.jack` file or a directory containing multiple `.jack` files. For each input file, a corresponding `.vm` file will be generated in the same folder.
+
+## 📚 Background
+This project is based on the Jack language and the Hack platform described in the book  
+**"Nand2Tetris"** by Nisan and Schocken. It corresponds to the final projects of the course.
+
+## 🛠 Requirements
+
+- Java Development Kit (JDK) 8 or higher
+
+
+## ✅ Status
+
+- Lexical analysis: ✅  
+- Syntax parsing and compilation: ✅  
+- Symbol table for scope management: ✅  
+- VM code generation: ✅  
+- Support for class declarations, methods, functions, variables, control flow, expressions, and subroutine calls
+
+## 📖 Learn More
+- [nand2tetris.org](https://www.nand2tetris.org/)
+- Chapters 9–11 of *The Elements of Computing Systems*
+
+---
+
+**Built for learning. Compiles for fun.**
